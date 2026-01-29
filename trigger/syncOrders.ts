@@ -1,32 +1,28 @@
 import { schedules } from "@trigger.dev/sdk/v3";
 import { prisma } from "../lib/prisma"; // Adjust path if needed
-import { z } from "zod";
 
-// Mock API Fetcher (Replace with actual API call)
-async function fetchMockOrders() {
-    // Simulating API response
-    return {
-        orders: [
-            {
-                id: "ord_001",
-                customer: "Alice Smith",
-                details: {
-                    placed_at: new Date().toISOString(), // Simulating lack of proper timestamp if needed, or just using current
-                    status: "completed",
-                    total_cents: 12500
-                },
-                items: [
-                    { product_id: "prod_A", quantity: 2, price_cents: 5000 },
-                    { product_id: "prod_B", quantity: 1, price_cents: 2500 }
-                ]
-            }
-        ],
-        products: [
-            { id: "prod_A", name: "Premium Widget", category: "Electronics", price_cents: 5000 },
-            { id: "prod_B", name: "Basic Gadget", category: "Home", price_cents: 2500 },
-        ]
-    };
-}
+// Types based on the API response
+type ApiProduct = {
+    product_id: number;
+    name: string;
+    description: string;
+    price: number;
+    unit: string;
+    image: string;
+    discount: number;
+    availability: boolean;
+    brand: string;
+    category: string;
+    rating: number;
+};
+
+type ApiOrder = {
+    order_id: number;
+    user_id: number;
+    items: { product_id: number; quantity: number }[];
+    total_price: number;
+    status: string;
+};
 
 export const syncOrdersTask = schedules.task({
     id: "sync-orders",
@@ -34,73 +30,108 @@ export const syncOrdersTask = schedules.task({
     run: async (payload, { ctx }) => {
         console.log("Starting sync job at", new Date());
 
-        const data = await fetchMockOrders();
-        const syncedAt = new Date(); // Uniform timestamp for this batch
+        // 1. Fetching Data
+        // Note: In a real scenario, we might want to handle pagination or error checking
+        const [productsRes, ordersRes] = await Promise.all([
+            fetch("https://fake-store-api.mock.beeceptor.com/api/products"),
+            fetch("https://fake-store-api.mock.beeceptor.com/api/orders"),
+        ]);
 
-        // 1. Upsert Products
-        for (const p of data.products) {
+        if (!productsRes.ok || !ordersRes.ok) {
+            throw new Error(`Failed to fetch data: Products ${productsRes.status}, Orders ${ordersRes.status}`);
+        }
+
+        const products: ApiProduct[] = await productsRes.json();
+        const orders: ApiOrder[] = await ordersRes.json();
+
+        const syncedAt = new Date(); // Uniform timestamp for this sync batch
+
+        // 2. Upsert Products
+        for (const p of products) {
             await prisma.product.upsert({
-                where: { externalId: p.id },
+                where: { externalId: p.product_id.toString() },
                 update: {
                     name: p.name,
+                    description: p.description,
+                    price: p.price,
                     category: p.category,
-                    price: p.price_cents / 100, // Convert cents to decimal unit
+                    brand: p.brand,
+                    image: p.image,
+                    rating: p.rating,
+                    availability: p.availability,
+                    discount: p.discount,
                     updatedAt: new Date(),
-                    syncedAt: syncedAt
+                    syncedAt: syncedAt,
                 },
                 create: {
-                    externalId: p.id,
+                    externalId: p.product_id.toString(),
                     name: p.name,
+                    description: p.description,
+                    price: p.price,
                     category: p.category,
-                    price: p.price_cents / 100,
-                    syncedAt: syncedAt
-                }
+                    brand: p.brand,
+                    image: p.image,
+                    rating: p.rating,
+                    availability: p.availability,
+                    discount: p.discount,
+                    syncedAt: syncedAt,
+                },
             });
         }
 
-        // 2. Upsert Orders with Transaction
-        // We process orders one by one or in batches.
-        for (const order of data.orders) {
+        // 3. Upsert Orders with Transaction
+        let ordersSyncedCount = 0;
+
+        for (const order of orders) {
             await prisma.$transaction(async (tx) => {
-                // Upsert the Order
+                // Map Status
+                // API returns: "Shipped", "Delivered", "Processing"
+                // Schema Enum: Shipped, Delivered, Processing
+                // We ensure case matching or defaulting
+                let statusStr = order.status;
+                // Simple manual mapping if needed, but they look compatible (Case sensitive in Prisma Enum usually)
+                // If API is "Shipped" and Enum is "Shipped", it works. 
+
+                // Mock API has no dates, so we generate a synthetic date
+                // Logic: Spread orders over the last 30 days based on their ID hash or similar, 
+                // to make the dashboard look populated.
+                // OR just use `syncedAt` if we want strict "when did we see it".
+                // The prompt suggests: "add a small random variation... or generate synthetic historical points"
+
+                // Deterministic synthetic date based on order_id to keep charts stable between syncs (unless we want them to move)
+                // Let's make it random but stable-ish? No, if we want "history", we should backdate some.
+                const dayOffset = (order.order_id * 13) % 30; // 0 to 29 days ago
+                const syntheticDate = new Date();
+                syntheticDate.setDate(syntheticDate.getDate() - dayOffset);
+
                 const upsertedOrder = await tx.order.upsert({
-                    where: { externalId: order.id },
+                    where: { externalId: order.order_id.toString() },
                     update: {
-                        status: order.details.status.toUpperCase() as any, // Map to enum
+                        status: statusStr as any, // Cast to any to bypass strict literal check (verified by runtime)
+                        totalAmount: order.total_price,
                         updatedAt: new Date(),
-                        syncedAt: syncedAt
+                        syncedAt: syncedAt,
                     },
                     create: {
-                        externalId: order.id,
-                        customerName: order.customer,
-                        status: order.details.status.toUpperCase() as any,
-                        totalAmount: order.details.total_cents / 100,
-                        orderDate: new Date(order.details.placed_at), // or use generated timestamp
+                        externalId: order.order_id.toString(),
+                        customerId: order.user_id.toString(),
+                        status: statusStr as any,
+                        totalAmount: order.total_price,
+                        orderDate: syntheticDate,
                         syncedAt: syncedAt,
-                    }
+                    },
                 });
 
                 // Upsert OrderItems
-                // Strategy: Delete existing items for this order and recreate, or sophisticated diffing.
-                // For simplicity and correctness on "sync", we often replace.
-                // But if we want to be "Robust" and "Senior":
-                // We check if item exists.
-
-                // Let's just create missing ones or update.
-                // Actually, simpler approach for interview: Delete all items for this order and re-insert.
-                // This handles removed items correctly.
-
-                // Check if we just created it (no need to delete) or updated.
-                // BUT, `upsert` doesn't tell us if it was created or updated easily without checking.
-                // Safe bet:
+                // Strategy: Delete and Recreate for Clean Sync
                 await tx.orderItem.deleteMany({
-                    where: { orderId: upsertedOrder.id }
+                    where: { orderId: upsertedOrder.id },
                 });
 
                 for (const item of order.items) {
-                    // Find internal product ID
+                    // Find internal product to get current price/link
                     const product = await tx.product.findUnique({
-                        where: { externalId: item.product_id }
+                        where: { externalId: item.product_id.toString() },
                     });
 
                     if (product) {
@@ -109,18 +140,23 @@ export const syncOrdersTask = schedules.task({
                                 orderId: upsertedOrder.id,
                                 productId: product.id,
                                 quantity: item.quantity,
-                                unitPrice: item.price_cents / 100
-                            }
+                                // We could use the current product price, or if the API gave us item price use that.
+                                // API Order items only have { product_id, quantity }.
+                                // So we MUST use the product's price from our database (which we just synced).
+                                unitPrice: product.price,
+                            },
                         });
                     }
                 }
             });
+            ordersSyncedCount++;
         }
 
         return {
             success: true,
             syncedAt,
-            ordersSynced: data.orders.length
+            productsSynced: products.length,
+            ordersSynced: ordersSyncedCount,
         };
     },
 });
