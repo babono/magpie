@@ -15,25 +15,27 @@ datasource db {
 
 model Product {
   id          String   @id @default(uuid())
-  // Use a string or Int from the external API, but for internal consistency we might map it.
-  // Assuming the external API has 'id' that is an integer or string. Let's assume String for flexibility.
   externalId  String   @unique
   name        String
   description String?
   price       Decimal  @db.Decimal(10, 2)
   category    String
   
-  // Inventory tracking (if applicable) or just "in stock" status
-  stockLevel  Int      @default(0)
+  // New fields from API
+  brand       String?
+  image       String?
+  rating      Decimal? @db.Decimal(3, 2)
+  availability Boolean @default(true)
+  discount    Decimal? @db.Decimal(5, 2)
 
   // Insights fields
-  totalRevenue GeneratedMetric? // Relation if we want to store pre-computed metrics
+  totalRevenue GeneratedMetric? 
   
   orderItems  OrderItem[]
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  syncedAt    DateTime @default(now()) // Track when this was last fetched from source
+  syncedAt    DateTime @default(now())
 
   @@index([category])
   @@index([syncedAt])
@@ -42,8 +44,8 @@ model Product {
 model Order {
   id          String      @id @default(uuid())
   externalId  String      @unique
-  customerName String? // If available
-  status      OrderStatus @default(PENDING)
+  customerId  String?     // Mapped from user_id
+  status      OrderStatus @default(Processing) 
   totalAmount Decimal     @db.Decimal(10, 2)
   
   orderItems  OrderItem[]
@@ -62,7 +64,7 @@ model OrderItem {
   orderId   String
   productId String
   quantity  Int
-  unitPrice Decimal @db.Decimal(10, 2)
+  unitPrice Decimal @default(0) @db.Decimal(10, 2) 
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])
@@ -71,10 +73,10 @@ model OrderItem {
 }
 
 enum OrderStatus {
-  PENDING
-  PROCESSING
-  COMPLETED
-  CANCELLED
+  Processing
+  Shipped
+  Delivered
+  Cancelled
 }
 
 // Optional: for storing aggregated insights if expensive to compute on the fly
