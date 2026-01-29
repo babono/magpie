@@ -1,0 +1,89 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  // Use a string or Int from the external API, but for internal consistency we might map it.
+  // Assuming the external API has 'id' that is an integer or string. Let's assume String for flexibility.
+  externalId  String   @unique
+  name        String
+  description String?
+  price       Decimal  @db.Decimal(10, 2)
+  category    String
+  
+  // Inventory tracking (if applicable) or just "in stock" status
+  stockLevel  Int      @default(0)
+
+  // Insights fields
+  totalRevenue GeneratedMetric? // Relation if we want to store pre-computed metrics
+  
+  orderItems  OrderItem[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  syncedAt    DateTime @default(now()) // Track when this was last fetched from source
+
+  @@index([category])
+  @@index([syncedAt])
+}
+
+model Order {
+  id          String      @id @default(uuid())
+  externalId  String      @unique
+  customerName String? // If available
+  status      OrderStatus @default(PENDING)
+  totalAmount Decimal     @db.Decimal(10, 2)
+  
+  orderItems  OrderItem[]
+
+  orderDate   DateTime
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  syncedAt    DateTime    @default(now())
+
+  @@index([status])
+  @@index([orderDate])
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  productId String
+  quantity  Int
+  unitPrice Decimal @db.Decimal(10, 2)
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([orderId, productId])
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
+// Optional: for storing aggregated insights if expensive to compute on the fly
+model GeneratedMetric {
+  id        String   @id @default(uuid())
+  productId String?  @unique
+  product   Product? @relation(fields: [productId], references: [id])
+  
+  metricType String
+  value      Decimal
+  calculatedAt DateTime @default(now())
+}
