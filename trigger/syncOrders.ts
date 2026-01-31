@@ -31,7 +31,6 @@ export const syncOrdersTask = schedules.task({
         console.log("Starting sync job at", new Date());
 
         // 1. Fetching Data
-        // Note: In a real scenario, we might want to handle pagination or error checking
         const [productsRes, ordersRes] = await Promise.all([
             fetch("https://fake-store-api.mock.beeceptor.com/api/products"),
             fetch("https://fake-store-api.mock.beeceptor.com/api/orders"),
@@ -43,8 +42,6 @@ export const syncOrdersTask = schedules.task({
 
         const products: ApiProduct[] = await productsRes.json();
         const orders: ApiOrder[] = await ordersRes.json();
-
-        const syncedAt = new Date(); // Uniform timestamp for this sync batch
 
         // 2. Upsert Products
         for (const p of products) {
@@ -61,7 +58,6 @@ export const syncOrdersTask = schedules.task({
                     availability: p.availability,
                     discount: p.discount,
                     updatedAt: new Date(),
-                    syncedAt: syncedAt,
                 },
                 create: {
                     externalId: p.product_id.toString(),
@@ -74,7 +70,6 @@ export const syncOrdersTask = schedules.task({
                     rating: p.rating,
                     availability: p.availability,
                     discount: p.discount,
-                    syncedAt: syncedAt,
                 },
             });
         }
@@ -83,42 +78,37 @@ export const syncOrdersTask = schedules.task({
         let ordersSyncedCount = 0;
         const allProductIds = products.map(p => p.product_id);
 
-        // Multiplication Strategy: Generate ~15-25 orders from the 5 base orders per run
-        const multiplier = Math.floor(Math.random() * 3) + 3; // 3 to 5 copies per order
+        // Multiplication Strategy: Reduced Volume (User requested max 15 total)
+        // 5 base orders * (1 to 3 copies) = 5 to 15 total new orders
+        const multiplier = Math.floor(Math.random() * 3) + 1;
 
         for (const order of orders) {
             for (let i = 0; i < multiplier; i++) {
                 await prisma.$transaction(async (tx) => {
-                    // 3a. Unique ID Generation for Cumulative History
-                    // Format: originalID_timestamp_index to ensure it's always unique and additive
-                    const uniqueExternalId = `${order.order_id}_${syncedAt.getTime()}_${i}`;
+                    // 3a. Unique ID Generation
+                    const uniqueExternalId = `${order.order_id}_${Date.now()}_${i}`;
 
                     // 3b. Randomize Status
                     const statuses = ["Processing", "Shipped", "Delivered", "Cancelled"];
                     const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
 
                     // 3c. Date Strategy: "Just Now" with slight jitter
-                    // We want to simulate new traffic arriving NOW, so we use syncedAt
-                    // Add random jitter of -0 to -59 minutes to spread them out over the last hour
-                    const orderDate = new Date(syncedAt);
+                    // We override 'createdAt' to simulate the order placement time
+                    const orderDate = new Date();
                     orderDate.setMinutes(orderDate.getMinutes() - Math.floor(Math.random() * 60));
 
-                    // 3d. Prepare Items with Randomization
+                    // 3d. Prepare Items with Unique Logic
                     let calculatedTotal = 0;
                     const randomizedItems = [];
 
-                    // Randomize the number of items in the order (1 to 3 items)
                     const distinctItemCount = Math.floor(Math.random() * 3) + 1;
 
-                    // Shuffle product IDs to ensure uniqueness
+                    // Shuffle for uniqueness
                     const shuffledProducts = [...allProductIds].sort(() => 0.5 - Math.random());
                     const selectedProductIds = shuffledProducts.slice(0, distinctItemCount);
 
                     for (const productId of selectedProductIds) {
-                        // Random Quantity (1-5)
                         const quantity = Math.floor(Math.random() * 5) + 1;
-
-                        // Find product to get price for total calculation
                         const product = products.find(p => p.product_id === productId);
                         if (product) {
                             calculatedTotal += product.price * quantity;
@@ -130,28 +120,27 @@ export const syncOrdersTask = schedules.task({
                         }
                     }
 
-                    // 3e. Upsert Order (Create mainly, but upsert for safety)
+                    // 3e. Upsert Order
                     const upsertedOrder = await tx.order.upsert({
                         where: { externalId: uniqueExternalId },
                         update: {
                             status: randomStatus as any,
                             totalAmount: calculatedTotal,
                             updatedAt: new Date(),
-                            syncedAt: syncedAt,
-                            orderDate: orderDate
+                            createdAt: orderDate // Should match original create if updated, or we leave it?
+                            // Usually updatedAt changes, createdAt stays. But if we resync, we might want to keep original.
+                            // But here uniqueExternalId forces a new record mostly.
                         },
                         create: {
                             externalId: uniqueExternalId,
                             customerId: order.user_id.toString(),
                             status: randomStatus as any,
                             totalAmount: calculatedTotal,
-                            orderDate: orderDate,
-                            syncedAt: syncedAt,
+                            createdAt: orderDate,
                         },
                     });
 
                     // 3f. Upsert OrderItems
-                    // Since IDs are unique per run, this is effectively a fresh create
                     await tx.orderItem.deleteMany({
                         where: { orderId: upsertedOrder.id },
                     });
@@ -179,7 +168,6 @@ export const syncOrdersTask = schedules.task({
 
         return {
             success: true,
-            syncedAt,
             productsSynced: products.length,
             ordersSynced: ordersSyncedCount,
         };

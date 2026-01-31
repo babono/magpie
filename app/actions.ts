@@ -45,7 +45,7 @@ export async function getRecentOrders() {
         status: order.status,
         totalAmount: order.totalAmount, // Keep original
         amount: order.totalAmount.toNumber(),
-        date: order.orderDate.toISOString(),
+        date: order.createdAt.toISOString(),
         items: order.orderItems.length,
     }));
 }
