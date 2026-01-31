@@ -15,7 +15,7 @@ datasource db {
 }
 
 model Product {
-  id          String   @id @default(uuid())
+  id          Int      @id @default(autoincrement())
   externalId  String   @unique
   name        String
   description String?
@@ -41,8 +41,8 @@ model Product {
 }
 
 model Order {
-  id          String      @id @default(uuid())
-  externalId  String      @unique
+  id          Int      @id @default(autoincrement())
+  externalId  String   @unique
   customerId  String?     // Mapped from user_id
   status      OrderStatus @default(Processing) 
   totalAmount Decimal     @db.Decimal(10, 2)
@@ -57,9 +57,9 @@ model Order {
 }
 
 model OrderItem {
-  id        String  @id @default(uuid())
-  orderId   String
-  productId String
+  id        Int     @id @default(autoincrement())
+  orderId   Int
+  productId Int
   quantity  Int
   unitPrice Decimal @default(0) @db.Decimal(10, 2) 
 
@@ -79,7 +79,7 @@ enum OrderStatus {
 // Optional: for storing aggregated insights if expensive to compute on the fly
 model GeneratedMetric {
   id        String   @id @default(uuid())
-  productId String?  @unique
+  productId Int?     @unique
   product   Product? @relation(fields: [productId], references: [id])
   
   metricType String

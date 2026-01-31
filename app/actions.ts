@@ -39,7 +39,7 @@ export async function getRecentOrders() {
     });
 
     return orders.map((order) => ({
-        id: order.externalId,
+        id: order.id.toString(), // Internal Integer ID
         // @ts-ignore: customerId exists in schema
         customer: (order as any).customerId || "Guest",
         status: order.status,
@@ -125,23 +125,20 @@ export async function getRevenueByCategory() {
 
 export async function getLastSyncTime() {
     // Check both Orders and Products for the latest sync time
+    // We use updatedAt to track the last time the sync job touched a record
     const [lastOrder, lastProduct] = await Promise.all([
         prisma.order.findFirst({
-            orderBy: { syncedAt: "desc" },
-            // @ts-ignore: syncedAt exists in schema
-            select: { syncedAt: true },
+            orderBy: { updatedAt: "desc" },
+            select: { updatedAt: true },
         }),
         prisma.product.findFirst({
-            orderBy: { syncedAt: "desc" },
-            // @ts-ignore: syncedAt exists in schema
-            select: { syncedAt: true },
+            orderBy: { updatedAt: "desc" },
+            select: { updatedAt: true },
         }),
     ]);
 
-    // @ts-ignore
-    const orderTime = lastOrder?.syncedAt?.getTime() || 0;
-    // @ts-ignore
-    const productTime = lastProduct?.syncedAt?.getTime() || 0;
+    const orderTime = lastOrder?.updatedAt?.getTime() || 0;
+    const productTime = lastProduct?.updatedAt?.getTime() || 0;
 
     // Return the latest of the two, or null if neither exists
     const latestTime = Math.max(orderTime, productTime);
