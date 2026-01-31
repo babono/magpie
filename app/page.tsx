@@ -5,6 +5,7 @@ import {
   getRecentOrders,
   getRevenueByCategory,
   getTopProducts,
+  getLastSyncTime,
 } from "@/app/actions";
 import {
   DollarSign,
@@ -19,6 +20,8 @@ import { TopProducts } from "@/components/dashboard/TopProducts";
 import { StatusDistribution } from "@/components/dashboard/StatusDistribution";
 import { CategoryDistribution } from "@/components/dashboard/CategoryDistribution";
 import { RevenueInsight } from "@/components/dashboard/RevenueInsight";
+import { AutoRefresh } from "@/components/dashboard/AutoRefresh";
+import { LastSynced } from "@/components/dashboard/LastSynced";
 
 // Force dynamic rendering since we want fresh data on every load
 export const dynamic = "force-dynamic";
@@ -32,6 +35,7 @@ export default async function DashboardPage() {
     statusData,
     categoryData,
     revenueData,
+    lastSyncTime,
   ] = await Promise.all([
     getDashboardMetrics(),
     getRecentOrders(),
@@ -39,14 +43,16 @@ export default async function DashboardPage() {
     getOrdersByStatus(),
     getProductsByCategory(),
     getRevenueByCategory(),
+    getLastSyncTime(),
   ]);
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
+      <AutoRefresh intervalMs={300000} />
       <div className="flex items-center justify-between space-y-2">
         <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
         <div className="flex items-center space-x-2">
-          {/* <Button>Download</Button> */}
+          <LastSynced timestamp={lastSyncTime} />
         </div>
       </div>
 
