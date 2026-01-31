@@ -81,75 +81,99 @@ export const syncOrdersTask = schedules.task({
 
         // 3. Upsert Orders with Transaction
         let ordersSyncedCount = 0;
+        const allProductIds = products.map(p => p.product_id);
+
+        // Multiplication Strategy: Generate ~15-25 orders from the 5 base orders per run
+        const multiplier = Math.floor(Math.random() * 3) + 3; // 3 to 5 copies per order
 
         for (const order of orders) {
-            await prisma.$transaction(async (tx) => {
-                // Map Status
-                // API returns: "Shipped", "Delivered", "Processing"
-                // Schema Enum: Shipped, Delivered, Processing
-                // We ensure case matching or defaulting
-                let statusStr = order.status;
-                // Simple manual mapping if needed, but they look compatible (Case sensitive in Prisma Enum usually)
-                // If API is "Shipped" and Enum is "Shipped", it works. 
+            for (let i = 0; i < multiplier; i++) {
+                await prisma.$transaction(async (tx) => {
+                    // 3a. Unique ID Generation for Cumulative History
+                    // Format: originalID_timestamp_index to ensure it's always unique and additive
+                    const uniqueExternalId = `${order.order_id}_${syncedAt.getTime()}_${i}`;
 
-                // Mock API has no dates, so we generate a synthetic date
-                // Logic: Spread orders over the last 30 days based on their ID hash or similar, 
-                // to make the dashboard look populated.
-                // OR just use `syncedAt` if we want strict "when did we see it".
-                // The prompt suggests: "add a small random variation... or generate synthetic historical points"
+                    // 3b. Randomize Status
+                    const statuses = ["Processing", "Shipped", "Delivered", "Cancelled"];
+                    const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
 
-                // Deterministic synthetic date based on order_id to keep charts stable between syncs (unless we want them to move)
-                // Let's make it random but stable-ish? No, if we want "history", we should backdate some.
-                const dayOffset = (order.order_id * 13) % 30; // 0 to 29 days ago
-                const syntheticDate = new Date();
-                syntheticDate.setDate(syntheticDate.getDate() - dayOffset);
+                    // 3c. Date Strategy: "Just Now" with slight jitter
+                    // We want to simulate new traffic arriving NOW, so we use syncedAt
+                    // Add random jitter of -0 to -59 minutes to spread them out over the last hour
+                    const orderDate = new Date(syncedAt);
+                    orderDate.setMinutes(orderDate.getMinutes() - Math.floor(Math.random() * 60));
 
-                const upsertedOrder = await tx.order.upsert({
-                    where: { externalId: order.order_id.toString() },
-                    update: {
-                        status: statusStr as any, // Cast to any to bypass strict literal check (verified by runtime)
-                        totalAmount: order.total_price,
-                        updatedAt: new Date(),
-                        syncedAt: syncedAt,
-                    },
-                    create: {
-                        externalId: order.order_id.toString(),
-                        customerId: order.user_id.toString(),
-                        status: statusStr as any,
-                        totalAmount: order.total_price,
-                        orderDate: syntheticDate,
-                        syncedAt: syncedAt,
-                    },
-                });
+                    // 3d. Prepare Items with Randomization
+                    let calculatedTotal = 0;
+                    const randomizedItems = [];
 
-                // Upsert OrderItems
-                // Strategy: Delete and Recreate for Clean Sync
-                await tx.orderItem.deleteMany({
-                    where: { orderId: upsertedOrder.id },
-                });
+                    // Randomize the number of items in the order (1 to 3 items)
+                    const distinctItemCount = Math.floor(Math.random() * 3) + 1;
 
-                for (const item of order.items) {
-                    // Find internal product to get current price/link
-                    const product = await tx.product.findUnique({
-                        where: { externalId: item.product_id.toString() },
+                    for (let j = 0; j < distinctItemCount; j++) {
+                        // Random Product
+                        const randomProductId = allProductIds[Math.floor(Math.random() * allProductIds.length)];
+
+                        // Random Quantity (1-5)
+                        const quantity = Math.floor(Math.random() * 5) + 1;
+
+                        // Find product to get price for total calculation
+                        const product = products.find(p => p.product_id === randomProductId);
+                        if (product) {
+                            calculatedTotal += product.price * quantity;
+                            randomizedItems.push({
+                                productId: randomProductId,
+                                quantity: quantity,
+                                price: product.price
+                            });
+                        }
+                    }
+
+                    // 3e. Upsert Order (Create mainly, but upsert for safety)
+                    const upsertedOrder = await tx.order.upsert({
+                        where: { externalId: uniqueExternalId },
+                        update: {
+                            status: randomStatus as any,
+                            totalAmount: calculatedTotal,
+                            updatedAt: new Date(),
+                            syncedAt: syncedAt,
+                            orderDate: orderDate
+                        },
+                        create: {
+                            externalId: uniqueExternalId,
+                            customerId: order.user_id.toString(),
+                            status: randomStatus as any,
+                            totalAmount: calculatedTotal,
+                            orderDate: orderDate,
+                            syncedAt: syncedAt,
+                        },
                     });
 
-                    if (product) {
-                        await tx.orderItem.create({
-                            data: {
-                                orderId: upsertedOrder.id,
-                                productId: product.id,
-                                quantity: item.quantity,
-                                // We could use the current product price, or if the API gave us item price use that.
-                                // API Order items only have { product_id, quantity }.
-                                // So we MUST use the product's price from our database (which we just synced).
-                                unitPrice: product.price,
-                            },
+                    // 3f. Upsert OrderItems
+                    // Since IDs are unique per run, this is effectively a fresh create
+                    await tx.orderItem.deleteMany({
+                        where: { orderId: upsertedOrder.id },
+                    });
+
+                    for (const item of randomizedItems) {
+                        const dbProduct = await tx.product.findUnique({
+                            where: { externalId: item.productId.toString() },
                         });
+
+                        if (dbProduct) {
+                            await tx.orderItem.create({
+                                data: {
+                                    orderId: upsertedOrder.id,
+                                    productId: dbProduct.id,
+                                    quantity: item.quantity,
+                                    unitPrice: item.price,
+                                },
+                            });
+                        }
                     }
-                }
-            });
-            ordersSyncedCount++;
+                });
+                ordersSyncedCount++;
+            }
         }
 
         return {
