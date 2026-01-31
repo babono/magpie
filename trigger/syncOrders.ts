@@ -110,19 +110,20 @@ export const syncOrdersTask = schedules.task({
                     // Randomize the number of items in the order (1 to 3 items)
                     const distinctItemCount = Math.floor(Math.random() * 3) + 1;
 
-                    for (let j = 0; j < distinctItemCount; j++) {
-                        // Random Product
-                        const randomProductId = allProductIds[Math.floor(Math.random() * allProductIds.length)];
+                    // Shuffle product IDs to ensure uniqueness
+                    const shuffledProducts = [...allProductIds].sort(() => 0.5 - Math.random());
+                    const selectedProductIds = shuffledProducts.slice(0, distinctItemCount);
 
+                    for (const productId of selectedProductIds) {
                         // Random Quantity (1-5)
                         const quantity = Math.floor(Math.random() * 5) + 1;
 
                         // Find product to get price for total calculation
-                        const product = products.find(p => p.product_id === randomProductId);
+                        const product = products.find(p => p.product_id === productId);
                         if (product) {
                             calculatedTotal += product.price * quantity;
                             randomizedItems.push({
-                                productId: randomProductId,
+                                productId: productId,
                                 quantity: quantity,
                                 price: product.price
                             });
