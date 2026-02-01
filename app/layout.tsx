@@ -9,8 +9,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "MagpieIQ Dashboard",
-  description: "Intelligent Dashboard Analytics",
+  title: "CORVID by Magpie",
+  description: "Commerce Order Reporting & Visualization Intelligence Dashboard",
 };
 
 export default function RootLayout({

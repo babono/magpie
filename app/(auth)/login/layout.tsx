@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "Login | MagpieIQ",
-    description: "Login to MagpieIQ Dashboard",
+    title: "Login | CORVID by Magpie",
+    description: "Login to CORVID by Magpie",
 };
 
 export default function LoginLayout({
