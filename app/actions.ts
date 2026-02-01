@@ -30,7 +30,7 @@ export async function getDashboardMetrics() {
 export async function getRecentOrders() {
     const orders = await prisma.order.findMany({
         take: 5,
-        orderBy: { createdAt: "desc" },
+        orderBy: { id: "desc" },
         include: {
             orderItems: {
                 include: { product: true },
@@ -93,34 +93,156 @@ export async function getProductsByCategory() {
 }
 
 // Custom Insight: Revenue by Category
-export async function getRevenueByCategory() {
-    // Prisma doesn't support complex joins in groupBy easily, so we might need raw query or JS processing.
-    // For small dataset, JS processing is fine and safer/easier to read.
+export interface RevenueBreakdownItem {
+    name: string;
+    value: number;
+    percentage: number;
+    color: string;
+}
 
-    const orders = await prisma.orderItem.findMany({
+export interface RevenueInsightData {
+    totalRevenue: number;
+    byCategory: RevenueBreakdownItem[];
+    byProduct: RevenueBreakdownItem[];
+    dailyByCategory: { date: string;[key: string]: number | string }[];
+    dailyByProduct: { date: string;[key: string]: number | string }[];
+    categoryColors: Record<string, string>;
+    productColors: Record<string, string>;
+}
+
+// Color palette for charts (golden yellow shades + complementary)
+const CHART_COLORS = [
+    "#F6C95F", "#EDB85A", "#F8DE97", "#F8D978",
+    "#D4A853", "#C19A4B", "#B8894A", "#A67C4E",
+    "#8B6F47", "#7A6244", "#6E5840", "#5D4E3A"
+];
+
+export async function getRevenueInsightData(): Promise<RevenueInsightData> {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const orderItems = await prisma.orderItem.findMany({
         include: {
             product: true,
-            order: true, // we might need order status to filter only completed orders? 
-            // Prompt doesn't specify logic, but usually revenue is from non-cancelled orders.
+            order: true,
+        },
+        where: {
+            order: {
+                createdAt: { gte: sevenDaysAgo },
+                status: { not: 'Cancelled' }
+            }
         }
     });
 
-    const revenueMap: Record<string, number> = {};
+    // Calculate totals by category and product
+    const categoryMap: Record<string, number> = {};
+    const productMap: Record<string, number> = {};
+    const dailyCategoryMap: Record<string, Record<string, number>> = {};
+    const dailyProductMap: Record<string, Record<string, number>> = {};
+    let totalRevenue = 0;
 
-    orders.forEach((item) => {
-        // Basic filter: ignore cancelled
-        if ((item.order.status as string) === 'Cancelled') return;
+    // Initialize days
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        const dateKey = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        dailyCategoryMap[dateKey] = {};
+        dailyProductMap[dateKey] = {};
+    }
 
-        const cat = item.product.category;
+    orderItems.forEach((item) => {
         const amount = item.unitPrice.toNumber() * item.quantity;
+        const category = item.product.category;
+        const productName = item.product.name.length > 25
+            ? item.product.name.substring(0, 25) + '...'
+            : item.product.name;
+        const dateKey = item.order.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-        if (!revenueMap[cat]) revenueMap[cat] = 0;
-        revenueMap[cat] += amount;
+        totalRevenue += amount;
+
+        // Category totals
+        if (!categoryMap[category]) categoryMap[category] = 0;
+        categoryMap[category] += amount;
+
+        // Product totals
+        if (!productMap[productName]) productMap[productName] = 0;
+        productMap[productName] += amount;
+
+        // Daily category
+        if (dailyCategoryMap[dateKey]) {
+            if (!dailyCategoryMap[dateKey][category]) dailyCategoryMap[dateKey][category] = 0;
+            dailyCategoryMap[dateKey][category] += amount;
+        }
+
+        // Daily product
+        if (dailyProductMap[dateKey]) {
+            if (!dailyProductMap[dateKey][productName]) dailyProductMap[dateKey][productName] = 0;
+            dailyProductMap[dateKey][productName] += amount;
+        }
     });
 
-    return Object.entries(revenueMap)
-        .map(([name, value]) => ({ name, value }))
-        .sort((a, b) => b.value - a.value); // Descending
+    // Sort and assign colors
+    const sortedCategories = Object.entries(categoryMap)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
+
+    const sortedProducts = Object.entries(productMap)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
+
+    const categoryColors: Record<string, string> = {};
+    const productColors: Record<string, string> = {};
+
+    sortedCategories.forEach(([name], index) => {
+        categoryColors[name] = CHART_COLORS[index % CHART_COLORS.length];
+    });
+
+    sortedProducts.forEach(([name], index) => {
+        productColors[name] = CHART_COLORS[index % CHART_COLORS.length];
+    });
+
+    // Build breakdown arrays
+    const byCategory: RevenueBreakdownItem[] = sortedCategories.map(([name, value]) => ({
+        name,
+        value,
+        percentage: totalRevenue > 0 ? (value / totalRevenue) * 100 : 0,
+        color: categoryColors[name],
+    }));
+
+    const byProduct: RevenueBreakdownItem[] = sortedProducts.map(([name, value]) => ({
+        name,
+        value,
+        percentage: totalRevenue > 0 ? (value / totalRevenue) * 100 : 0,
+        color: productColors[name],
+    }));
+
+    // Build daily data for stacked charts
+    const dailyByCategory = Object.entries(dailyCategoryMap).map(([date, data]) => ({
+        date,
+        ...data,
+    }));
+
+    const dailyByProduct = Object.entries(dailyProductMap).map(([date, data]) => ({
+        date,
+        ...data,
+    }));
+
+    return {
+        totalRevenue,
+        byCategory,
+        byProduct,
+        dailyByCategory,
+        dailyByProduct,
+        categoryColors,
+        productColors,
+    };
+}
+
+export async function getRevenueByCategory() {
+    // Keep for backward compatibility
+    const data = await getRevenueInsightData();
+    return data.byCategory.map(item => ({ name: item.name, value: item.value }));
 }
 
 export async function getLastSyncTime() {

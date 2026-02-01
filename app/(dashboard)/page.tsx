@@ -3,7 +3,7 @@ import {
   getOrdersByStatus,
   getProductsByCategory,
   getRecentOrders,
-  getRevenueByCategory,
+  getRevenueInsightData,
   getTopProducts,
   getLastSyncTime,
 } from "@/app/actions";
@@ -44,7 +44,7 @@ export default async function DashboardPage() {
     getTopProducts(),
     getOrdersByStatus(),
     getProductsByCategory(),
-    getRevenueByCategory(),
+    getRevenueInsightData(),
     getLastSyncTime(),
   ]);
 
@@ -62,31 +62,28 @@ export default async function DashboardPage() {
       <MetricsTabs metrics={metricsData} />
 
       {/* Main Charts */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-8">
         <div className="col-span-4">
-          <RevenueInsight data={revenueData} />
+          <StatusDistribution data={statusData} />
         </div>
-        <div className="col-span-3">
+        <div className="col-span-4">
           {/* Placeholder for another chart or just layout spacing */}
           <CategoryDistribution data={categoryData} />
         </div>
       </div>
 
-      {/* Secondary Charts Setup */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
-        <StatusDistribution data={statusData} />
-        {/* Reusing space efficiently, or sticking to the grid */}
+      {/* Tables - Full Width */}
+      <div className="space-y-4">
+        <RecentOrders orders={recentOrders} />
+        <TopProducts products={topProducts} />
       </div>
 
-      {/* Tables */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <div className="col-span-4">
-          <RecentOrders orders={recentOrders} />
-        </div>
-        <div className="col-span-3">
-          <TopProducts products={topProducts} />
-        </div>
-      </div>
+      {/* Secondary Charts Setup */}
+
+      <RevenueInsight data={revenueData} />
+      {/* Reusing space efficiently, or sticking to the grid */}
+
+
     </div>
   );
 }
