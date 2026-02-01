@@ -75,7 +75,7 @@ export default function LoginPage() {
                         </label>
                         <input
                             type="email"
-                            className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition"
+                            className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-600 focus:border-transparent transition"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
@@ -89,7 +89,7 @@ export default function LoginPage() {
                         </label>
                         <input
                             type="password"
-                            className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition"
+                            className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-600 focus:border-transparent transition"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
@@ -99,7 +99,7 @@ export default function LoginPage() {
                     </div>
                     <button
                         type="submit"
-                        className={`cursor-pointer w-full bg-emerald-500 text-white font-semibold py-3 rounded-lg hover:bg-emerald-600 transition-colors ${loading ? "opacity-50 cursor-not-allowed" : ""
+                        className={`cursor-pointer w-full bg-zinc-600 text-white font-semibold py-3 rounded-lg hover:bg-zinc-700 transition-colors ${loading ? "opacity-50 cursor-not-allowed" : ""
                             }`}
                         disabled={loading}
                     >
