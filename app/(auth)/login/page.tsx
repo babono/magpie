@@ -1,6 +1,7 @@
 "use client";
 
 import { signIn, useSession } from "next-auth/react";
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import ParticlesCanvas from "./particle";
@@ -41,10 +42,15 @@ export default function LoginPage() {
             <ParticlesCanvas />
             <div className="flex flex-col items-center justify-center min-h-screen relative z-10 px-4">
                 {/* Logo and Branding */}
-                <div className="mb-8 text-center">
-                    <h1 className="text-5xl font-bold text-gray-800 tracking-tight">
-                        <span className="text-emerald-600">Magpie</span>IQ
-                    </h1>
+                <div className="mb-8 flex flex-col items-center">
+                    <Image
+                        src="/logo-magpie.png"
+                        alt="MagpieIQ"
+                        width={223}
+                        height={92}
+                        className="mb-2"
+                        priority
+                    />
                     <p className="text-gray-600 mt-2 text-lg">
                         Intelligent Dashboard Analytics
                     </p>

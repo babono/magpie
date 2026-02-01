@@ -40,10 +40,10 @@ function ParticlesCanvas() {
             },
             particles: {
                 color: {
-                    value: "#E5E0C5",
+                    value: "#444846",
                 },
                 links: {
-                    color: "#E5E0C5",
+                    color: "#444846",
                     distance: 150,
                     enable: true,
                     opacity: 0.6,
