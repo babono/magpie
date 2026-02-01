@@ -1,15 +1,17 @@
-# Magpie Dashboard - Tech Lead Interview
+# CORVID by Magpie - Tech Lead Interview
 
 ## Architecture Overview
 This project demonstrates a modern, scalable architecture for a high-performance e-commerce dashboard.
 
--   **Frontend**: Next.js 16 (App Router), React 19, Tailwind CSS.
+-   **Frontend**: Next.js 16 (App Router), React 19, Tailwind CSS, **Google Fonts (Inter)**.
 -   **UI Library**: Shadcn/UI for accessible, professional components + Recharts for visualizations.
 -   **Data Layer**: PostgreSQL (Neon Serverless) queried via Prisma ORM.
 -   **Data Pipeline**: Trigger.dev v3 for reliable, scheduled background jobs.
 
 ## Architecture Decisions
--   **Normalized Schema**: Instead of dumping JSON, I normalized `Order`, `Product`, and `OrderItem` tables to ensure data integrity and enable precise analytical queries.
+-   **Normalized Schema with Integer IDs**: I normalized `Order`, `Product`, and `OrderItem` tables and migrated to standard **Integer IDs** (instead of UUIDs/Strings) for primary keys. This ensures better indexing performance and canonical ordering.
+-   **Centralized Type Definitions**: To improve maintainability and avoid circular dependency issues, all shared TypeScript interfaces (`Product`, `Order`, `AggregatedMetric`) are centralized in the `types/` directory.
+-   **Route Groups**: The dashboard is isolated under a `(dashboard)` route group with a dedicated layout (`app/(dashboard)/layout.tsx`) that handles the navigation bar and background styling (`bg-[#FEF8D6]`), keeping the auth flow visually and structurally distinct.
 -   **Synthetic History**: The mock API provides static snapshots. My sync logic distributes orders over the last 30 days to visualize meaningful trends on the dashboard.
 -   **Server Actions**: Data fetching is handled server-side for security and performance, directly aggregating metrics from the DB.
 
