@@ -4,7 +4,9 @@ import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import ParticlesCanvas from "./particle";
+import dynamic from "next/dynamic";
+
+const ParticlesCanvas = dynamic(() => import("./particle"), { ssr: false });
 
 export default function LoginPage() {
     const { data: session, status } = useSession();
