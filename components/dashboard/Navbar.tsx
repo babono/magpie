@@ -7,18 +7,19 @@ export function Navbar() {
     const { data: session } = useSession();
 
     return (
-        <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between shadow-sm">
+        <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-100 px-6 py-1 flex items-center justify-between shadow-sm">
             <div className="flex items-center">
                 <Image
                     src="/logo-magpie.png"
                     alt="MagpieIQ"
                     width={140}
                     height={60}
-                    className="h-8 w-auto object-contain"
+                    className="h-10 w-auto object-contain mb-4"
                     priority
                 />
-                <div className="mx-4 h-6 w-px bg-gray-200"></div>
-                <span className="text-gray-500 font-medium">SupplySense</span>
+                <div className="ml-4 bg-[#F6C95F] px-2 py-0.5 rounded-md shadow-sm flex items-center">
+                    <span className="text-lg font-bold text-[#4F4D42] tracking-tight">CORVID</span>
+                </div>
             </div>
 
             <div className="flex items-center gap-6">

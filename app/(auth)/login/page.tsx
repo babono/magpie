@@ -46,7 +46,7 @@ export default function LoginPage() {
                 {/* Login Form */}
                 <form
                     onSubmit={handleSubmit}
-                    className="bg-white p-8 rounded-xl shadow-xl w-full max-w-sm"
+                    className="bg-white p-8 rounded-xl shadow-xl w-full max-w-md"
                 >
                     {/* Logo and Branding */}
                     <div className="mb-8 flex flex-col items-center">
@@ -58,8 +58,11 @@ export default function LoginPage() {
                             className="mb-2"
                             priority
                         />
-                        <p className="text-gray-600 mt-2 text-lg">
-                            Intelligent Dashboard Analytics
+                        <div className="bg-[#F6C95F] px-6 py-2 rounded-lg mb-4 shadow-sm inline-block">
+                            <h1 className="text-5xl font-bold text-[#4F4D42] tracking-tight m-0">CORVID</h1>
+                        </div>
+                        <p className="text-gray-500 text-xs font-medium tracking-widest uppercase text-center">
+                            <span className="text-zinc-900 font-bold">C</span>ommerce <span className="text-zinc-900 font-bold">O</span>rder <span className="text-zinc-900 font-bold">R</span>eporting & <span className="text-zinc-900 font-bold">V</span>isualization <span className="text-zinc-900 font-bold">I</span>ntelligence <span className="text-zinc-900 font-bold">D</span>ashboard
                         </p>
                     </div>
                     {error && (
