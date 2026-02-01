@@ -145,3 +145,158 @@ export async function getLastSyncTime() {
 
     return latestTime > 0 ? new Date(latestTime) : null;
 }
+
+// Metric types for the analytics tabs
+export interface MetricWithDelta {
+    key: 'revenue' | 'orders' | 'avgOrderValue' | 'avgRating';
+    label: string;
+    value: number;
+    previousValue: number;
+    delta: number; // percentage change
+    format: 'currency' | 'number' | 'rating';
+    chartData: { date: string; value: number }[];
+}
+
+export async function getMetricsWithTimeSeries(): Promise<MetricWithDelta[]> {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const fourteenDaysAgo = new Date(now);
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+
+    // Get orders from last 14 days for comparison
+    const orders = await prisma.order.findMany({
+        where: {
+            createdAt: { gte: fourteenDaysAgo },
+            status: { not: 'Cancelled' }
+        },
+        select: {
+            createdAt: true,
+            totalAmount: true,
+        },
+        orderBy: { createdAt: 'asc' }
+    });
+
+    // Get product ratings (static for now, as ratings don't have timestamps)
+    const productStats = await prisma.product.aggregate({
+        _avg: { rating: true },
+        _count: { id: true }
+    });
+    const avgRating = productStats._avg?.rating?.toNumber() || 0;
+
+    // Group orders by day
+    const dailyData: Record<string, { revenue: number; orderCount: number }> = {};
+
+    // Initialize all 14 days with zeros
+    for (let i = 13; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        const dateKey = d.toISOString().split('T')[0];
+        dailyData[dateKey] = { revenue: 0, orderCount: 0 };
+    }
+
+    // Populate with actual data
+    orders.forEach(order => {
+        const dateKey = order.createdAt.toISOString().split('T')[0];
+        if (dailyData[dateKey]) {
+            dailyData[dateKey].revenue += order.totalAmount.toNumber();
+            dailyData[dateKey].orderCount += 1;
+        }
+    });
+
+    // Split into current (last 7 days) and previous (prior 7 days)
+    const sortedDates = Object.keys(dailyData).sort();
+    const previousPeriodDates = sortedDates.slice(0, 7);
+    const currentPeriodDates = sortedDates.slice(7, 14);
+
+    // Calculate totals for each period
+    let currentRevenue = 0, previousRevenue = 0;
+    let currentOrders = 0, previousOrders = 0;
+
+    previousPeriodDates.forEach(date => {
+        previousRevenue += dailyData[date].revenue;
+        previousOrders += dailyData[date].orderCount;
+    });
+
+    currentPeriodDates.forEach(date => {
+        currentRevenue += dailyData[date].revenue;
+        currentOrders += dailyData[date].orderCount;
+    });
+
+    const currentAvgOrder = currentOrders > 0 ? currentRevenue / currentOrders : 0;
+    const previousAvgOrder = previousOrders > 0 ? previousRevenue / previousOrders : 0;
+
+    // Calculate deltas (percentage change)
+    const calcDelta = (current: number, previous: number): number => {
+        if (previous === 0) return current > 0 ? 100 : 0;
+        return ((current - previous) / previous) * 100;
+    };
+
+    // Build chart data (last 7 days only)
+    const revenueChartData = currentPeriodDates.map(date => ({
+        date: formatChartDate(date),
+        value: dailyData[date].revenue
+    }));
+
+    const ordersChartData = currentPeriodDates.map(date => ({
+        date: formatChartDate(date),
+        value: dailyData[date].orderCount
+    }));
+
+    const avgOrderChartData = currentPeriodDates.map(date => ({
+        date: formatChartDate(date),
+        value: dailyData[date].orderCount > 0
+            ? dailyData[date].revenue / dailyData[date].orderCount
+            : 0
+    }));
+
+    // Rating chart is flat (we don't have historical rating data)
+    const ratingChartData = currentPeriodDates.map(date => ({
+        date: formatChartDate(date),
+        value: avgRating
+    }));
+
+    return [
+        {
+            key: 'revenue',
+            label: 'Total Revenue',
+            value: currentRevenue,
+            previousValue: previousRevenue,
+            delta: calcDelta(currentRevenue, previousRevenue),
+            format: 'currency',
+            chartData: revenueChartData
+        },
+        {
+            key: 'orders',
+            label: 'Total Orders',
+            value: currentOrders,
+            previousValue: previousOrders,
+            delta: calcDelta(currentOrders, previousOrders),
+            format: 'number',
+            chartData: ordersChartData
+        },
+        {
+            key: 'avgOrderValue',
+            label: 'Avg. Order Value',
+            value: currentAvgOrder,
+            previousValue: previousAvgOrder,
+            delta: calcDelta(currentAvgOrder, previousAvgOrder),
+            format: 'currency',
+            chartData: avgOrderChartData
+        },
+        {
+            key: 'avgRating',
+            label: 'Avg. Product Rating',
+            value: avgRating,
+            previousValue: avgRating, // No historical data
+            delta: 0,
+            format: 'rating',
+            chartData: ratingChartData
+        }
+    ];
+}
+
+function formatChartDate(dateStr: string): string {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}

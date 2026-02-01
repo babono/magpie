@@ -1,5 +1,5 @@
 import {
-  getDashboardMetrics,
+  getMetricsWithTimeSeries,
   getOrdersByStatus,
   getProductsByCategory,
   getRecentOrders,
@@ -7,13 +7,6 @@ import {
   getTopProducts,
   getLastSyncTime,
 } from "@/app/actions";
-import {
-  DollarSign,
-  ShoppingCart,
-  TrendingUp,
-  Star,
-} from "lucide-react";
-import { MetricCard } from "@/components/dashboard/MetricCard";
 import { RecentOrders } from "@/components/dashboard/RecentOrders";
 import { TopProducts } from "@/components/dashboard/TopProducts";
 import { StatusDistribution } from "@/components/dashboard/StatusDistribution";
@@ -21,6 +14,7 @@ import { CategoryDistribution } from "@/components/dashboard/CategoryDistributio
 import { RevenueInsight } from "@/components/dashboard/RevenueInsight";
 import { AutoRefresh } from "@/components/dashboard/AutoRefresh";
 import { LastSynced } from "@/components/dashboard/LastSynced";
+import { MetricsTabs } from "@/components/dashboard/MetricsTabs";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
@@ -37,7 +31,7 @@ export default async function DashboardPage() {
 
   // Fetch data in parallel
   const [
-    metrics,
+    metricsData,
     recentOrders,
     topProducts,
     statusData,
@@ -45,7 +39,7 @@ export default async function DashboardPage() {
     revenueData,
     lastSyncTime,
   ] = await Promise.all([
-    getDashboardMetrics(),
+    getMetricsWithTimeSeries(),
     getRecentOrders(),
     getTopProducts(),
     getOrdersByStatus(),
@@ -64,33 +58,8 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Metric Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <MetricCard
-          title="Total Revenue"
-          value={`$${metrics.revenue.toFixed(2)}`}
-          icon={DollarSign}
-          description="Lifetime revenue"
-        />
-        <MetricCard
-          title="Total Orders"
-          value={metrics.totalOrders}
-          icon={ShoppingCart}
-          description="Total orders processed"
-        />
-        <MetricCard
-          title="Avg. Order Value"
-          value={`$${metrics.avgOrderValue.toFixed(2)}`}
-          icon={TrendingUp}
-          description="Per order average"
-        />
-        <MetricCard
-          title="Avg. Product Rating"
-          value={metrics.avgRating.toFixed(1)}
-          icon={Star}
-          description="Across all products"
-        />
-      </div>
+      {/* Analytics Metrics Tabs */}
+      <MetricsTabs metrics={metricsData} />
 
       {/* Main Charts */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
