@@ -20,9 +20,26 @@ interface Props {
     }[];
 }
 
+function formatDate(dateString: string): string {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+    });
+}
+
+function formatTime(dateString: string): string {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+}
+
 export function RecentOrders({ orders }: Props) {
     return (
-        <Card className="col-span-1">
+        <Card className="w-full">
             <CardHeader>
                 <CardTitle>Recent Orders</CardTitle>
             </CardHeader>
@@ -30,17 +47,23 @@ export function RecentOrders({ orders }: Props) {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Order</TableHead>
+                            <TableHead>Order ID</TableHead>
+                            <TableHead>Customer</TableHead>
                             <TableHead>Status</TableHead>
+                            <TableHead className="text-center">Items</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Time</TableHead>
                             <TableHead className="text-right">Amount</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {orders.map((order) => (
                             <TableRow key={order.id}>
-                                <TableCell>
-                                    <div className="font-medium">{order.customer}</div>
-                                    <div className="text-xs text-muted-foreground">{order.id.slice(0, 8)}...</div>
+                                <TableCell className="font-mono text-sm">
+                                    #{order.id}
+                                </TableCell>
+                                <TableCell className="font-medium">
+                                    {order.customer}
                                 </TableCell>
                                 <TableCell>
                                     <Badge variant={
@@ -50,7 +73,18 @@ export function RecentOrders({ orders }: Props) {
                                         {order.status}
                                     </Badge>
                                 </TableCell>
-                                <TableCell className="text-right">${order.amount.toFixed(2)}</TableCell>
+                                <TableCell className="text-center">
+                                    {order.items}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">
+                                    {formatDate(order.date)}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">
+                                    {formatTime(order.date)}
+                                </TableCell>
+                                <TableCell className="text-right font-medium">
+                                    ${order.amount.toFixed(2)}
+                                </TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
