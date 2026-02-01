@@ -85,8 +85,7 @@ export const syncOrdersTask = schedules.task({
         for (const order of orders) {
             for (let i = 0; i < multiplier; i++) {
                 await prisma.$transaction(async (tx) => {
-                    // 3a. Unique ID Generation
-                    const uniqueExternalId = `${order.order_id}_${Date.now()}_${i}`;
+
 
                     // 3b. Randomize Status
                     const statuses = ["Processing", "Shipped", "Delivered", "Cancelled"];
@@ -120,19 +119,9 @@ export const syncOrdersTask = schedules.task({
                         }
                     }
 
-                    // 3e. Upsert Order
-                    const upsertedOrder = await tx.order.upsert({
-                        where: { externalId: uniqueExternalId },
-                        update: {
-                            status: randomStatus as any,
-                            totalAmount: calculatedTotal,
-                            updatedAt: new Date(),
-                            createdAt: orderDate // Should match original create if updated, or we leave it?
-                            // Usually updatedAt changes, createdAt stays. But if we resync, we might want to keep original.
-                            // But here uniqueExternalId forces a new record mostly.
-                        },
-                        create: {
-                            externalId: uniqueExternalId,
+                    // 3e. Create Order (no need for upsert as we want history)
+                    const upsertedOrder = await tx.order.create({
+                        data: {
                             customerId: order.user_id.toString(),
                             status: randomStatus as any,
                             totalAmount: calculatedTotal,

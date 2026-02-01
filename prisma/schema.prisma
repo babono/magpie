@@ -42,7 +42,6 @@ model Product {
 
 model Order {
   id          Int      @id @default(autoincrement())
-  externalId  String   @unique
   customerId  String?     // Mapped from user_id
   status      OrderStatus @default(Processing) 
   totalAmount Decimal     @db.Decimal(10, 2)
