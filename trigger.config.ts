@@ -20,6 +20,6 @@ export default defineConfig({
     },
   },
   build: {
-    extensions: [prismaExtension({ schema: "prisma/schema.prisma" })],
+    extensions: [prismaExtension({ mode: "modern" })],
   },
 });

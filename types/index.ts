@@ -48,7 +48,7 @@ export interface TopProduct {
     category: string;
     price: number;
     rating: number;
-    image: string | null;
+    image?: string;
 }
 
 export interface StatusDistribution {

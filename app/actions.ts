@@ -70,7 +70,7 @@ export async function getTopProducts(): Promise<TopProduct[]> {
         category: p.category,
         price: p.price.toNumber(),
         rating: p.rating?.toNumber() || 0,
-        image: p.image,
+        image: p.image ?? undefined,
     }));
 }
 
