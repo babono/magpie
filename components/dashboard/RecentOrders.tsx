@@ -7,7 +7,6 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
 interface Props {
     orders: {
@@ -18,6 +17,19 @@ interface Props {
         date: string;
         items: number;
     }[];
+}
+
+const COLORS = ["#F6C95F", "#EDB85A", "#F8DE97", "#F8D978"];
+
+function getStatusColor(status: string): string {
+    // Simple hash-like selection to ensure consistent color for same status
+    // or just simplified mapping based on likely statuses if we knew them.
+    // Given the prompt asked for "conditional based on the value mapping with these colors",
+    // and we see "Delivered", "Shipped" in the original code, we can map them.
+    // However, sticking to a round-robin or deterministic assignment from the array is safer if statuses vary.
+    // Let's use a simple deterministic mapping based on string length or first char code to pick a color
+    const index = status.length % COLORS.length;
+    return COLORS[index];
 }
 
 function formatDate(dateString: string): string {
@@ -66,12 +78,12 @@ export function RecentOrders({ orders }: Props) {
                                     {order.customer}
                                 </TableCell>
                                 <TableCell>
-                                    <Badge variant={
-                                        order.status === 'Delivered' ? 'default' :
-                                            order.status === 'Shipped' ? 'secondary' : 'outline'
-                                    }>
+                                    <span
+                                        className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold text-black/80"
+                                        style={{ backgroundColor: getStatusColor(order.status) }}
+                                    >
                                         {order.status}
-                                    </Badge>
+                                    </span>
                                 </TableCell>
                                 <TableCell className="text-center">
                                     {order.items}
