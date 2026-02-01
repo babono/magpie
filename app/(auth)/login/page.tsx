@@ -43,29 +43,25 @@ export default function LoginPage() {
         <div className="relative min-h-screen">
             <ParticlesCanvas />
             <div className="flex flex-col items-center justify-center min-h-screen relative z-10 px-4">
-                {/* Logo and Branding */}
-                <div className="mb-8 flex flex-col items-center">
-                    <Image
-                        src="/logo-magpie.png"
-                        alt="MagpieIQ"
-                        width={223}
-                        height={92}
-                        className="mb-2"
-                        priority
-                    />
-                    <p className="text-gray-600 mt-2 text-lg">
-                        Intelligent Dashboard Analytics
-                    </p>
-                </div>
-
                 {/* Login Form */}
                 <form
                     onSubmit={handleSubmit}
                     className="bg-white p-8 rounded-xl shadow-xl w-full max-w-sm"
                 >
-                    <h2 className="text-2xl mb-6 text-center font-bold text-gray-800">
-                        Login
-                    </h2>
+                    {/* Logo and Branding */}
+                    <div className="mb-8 flex flex-col items-center">
+                        <Image
+                            src="/logo-magpie.png"
+                            alt="MagpieIQ"
+                            width={223}
+                            height={92}
+                            className="mb-2"
+                            priority
+                        />
+                        <p className="text-gray-600 mt-2 text-lg">
+                            Intelligent Dashboard Analytics
+                        </p>
+                    </div>
                     {error && (
                         <p className="text-red-500 mb-4 text-center text-sm bg-red-50 p-2 rounded">
                             {error}
