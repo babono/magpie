@@ -12,7 +12,7 @@ import {
     Cell,
     Tooltip,
 } from "recharts";
-import type { RevenueInsightData, RevenueBreakdownItem } from "@/app/actions";
+import type { RevenueInsightData, RevenueBreakdownItem } from "@/types";
 
 interface Props {
     data: RevenueInsightData;

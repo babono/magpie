@@ -11,7 +11,7 @@ import {
     Tooltip,
     CartesianGrid,
 } from "recharts";
-import type { MetricWithDelta } from "@/app/actions";
+import type { MetricWithDelta } from "@/types";
 
 interface MetricsTabsProps {
     metrics: MetricWithDelta[];

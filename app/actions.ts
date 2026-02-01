@@ -13,9 +13,6 @@ import type {
     ChartDataPoint,
 } from "@/types";
 
-// Re-export types for consumers
-export type { RevenueBreakdownItem, RevenueInsightData, MetricWithDelta };
-
 export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     const [totalRevenue, totalOrders, productRatingStats] = await Promise.all([
         prisma.order.aggregate({
@@ -61,8 +58,7 @@ export async function getRecentOrders(): Promise<RecentOrder[]> {
     }));
 }
 
-export async function getTopProducts() {
-    const products = await prisma.prod: Promise<TopProduct[]> {
+export async function getTopProducts(): Promise<TopProduct[]> {
     const products = await prisma.product.findMany({
         take: 5,
         orderBy: { price: "desc" },
@@ -74,13 +70,11 @@ export async function getTopProducts() {
         category: p.category,
         price: p.price.toNumber(),
         rating: p.rating?.toNumber() || 0,
-        image: p
+        image: p.image,
+    }));
 }
 
-export async function getOrdersByStatus() {
-    const statusCounts = await prisma.order.groupBy({
-        by: ["status"],
-        _count: { id: true },: Promise<StatusDistribution[]> {
+export async function getOrdersByStatus(): Promise<StatusDistribution[]> {
     const statusCounts = await prisma.order.groupBy({
         by: ["status"],
         _count: { id: true },
@@ -101,7 +95,10 @@ export async function getProductsByCategory(): Promise<CategoryDistribution[]> {
     return categoryCounts.map((c) => ({
         name: c.category,
         value: c._count.id,
-    }))w shades + complementary)
+    }));
+}
+
+// Color palette for charts (golden yellow shades + complementary)
 const CHART_COLORS = [
     "#F6C95F", "#EDB85A", "#F8DE97", "#F8D978",
     "#D4A853", "#C19A4B", "#B8894A", "#A67C4E",
@@ -230,28 +227,7 @@ export async function getRevenueInsightData(): Promise<RevenueInsightData> {
     };
 }
 
-export async function getRevenueByCategory() {
-    // Keep for backward compatibility
-    const data = await getRevenueInsightData();
-    return data.byCategory.map(item => ({ name: item.name, value: item.value }));
-}
-
-export async function getLastSyncTime() {
-    // Check both Orders and Products for the latest sync time
-    // We use updatedAt to track the last time the sync job touched a record
-    const [lastOrder, lastProduct] = await Promise.all([
-        prisma.order.findFirst({
-            orderBy: { updatedAt: "desc" },
-            select: { updatedAt: true },
-        }),
-        prisma.product.findFirst({
-            orderBy: { updatedAt: "desc" },
-            select: { updatedAt: true },
-        }),
-    ]);
-
-    const orderTime = lastOrder?.updatedAt?.getTime() || 0;
-    const productTime = lastProduct?.updated: Promise<{ name: string; value: number }[]> {
+export async function getRevenueByCategory(): Promise<{ name: string; value: number }[]> {
     // Keep for backward compatibility
     const data = await getRevenueInsightData();
     return data.byCategory.map(item => ({ name: item.name, value: item.value }));
@@ -277,7 +253,28 @@ export async function getLastSyncTime(): Promise<Date | null> {
     // Return the latest of the two, or null if neither exists
     const latestTime = Math.max(orderTime, productTime);
 
-    return latestTime > 0 ? new Date(latestTime) : null
+    return latestTime > 0 ? new Date(latestTime) : null;
+}
+
+export async function getMetricsWithTimeSeries(): Promise<MetricWithDelta[]> {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const fourteenDaysAgo = new Date(now);
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+
+    // Get orders from last 14 days for comparison
+    const orders = await prisma.order.findMany({
+        where: {
+            createdAt: { gte: fourteenDaysAgo },
+            status: { not: 'Cancelled' }
+        },
+        select: {
+            createdAt: true,
+            totalAmount: true,
+        },
+        orderBy: { createdAt: 'asc' }
+    });
 
     // Get product ratings (static for now, as ratings don't have timestamps)
     const productStats = await prisma.product.aggregate({
@@ -335,39 +332,7 @@ export async function getLastSyncTime(): Promise<Date | null> {
     };
 
     // Build chart data (last 7 days only)
-    const revenueChartData = currentPeriodDates.map(date => ({
-        date: formatChartDate(date),
-        value: dailyData[date].revenue
-    }));
-
-    const ordersChartData = currentPeriodDates.map(date => ({
-        date: formatChartDate(date),
-        value: dailyData[date].orderCount
-    }));
-
-    const avgOrderChartData = currentPeriodDates.map(date => ({
-        date: formatChartDate(date),
-        value: dailyData[date].orderCount > 0
-            ? dailyData[date].revenue / dailyData[date].orderCount
-            : 0
-    }));
-
-    // Rating chart is flat (we don't have historical rating data)
-    const ratingChartData = currentPeriodDates.map(date => ({
-        date: formatChartDate(date),
-        value: avgRating
-    }));
-
-    return [
-        {
-            key: 'revenue',
-            label: 'Total Revenue',
-            value: currentRevenue,
-            previousValue: previousRevenue,
-            delta: calcDelta(currentRevenue, previousRevenue),
-            format: 'currency',
-            chartData: revenueChartData
-        },: ChartDataPoint[] = currentPeriodDates.map(date => ({
+    const revenueChartData: ChartDataPoint[] = currentPeriodDates.map(date => ({
         date: formatChartDate(date),
         value: dailyData[date].revenue
     }));
@@ -385,7 +350,39 @@ export async function getLastSyncTime(): Promise<Date | null> {
     }));
 
     // Rating chart is flat (we don't have historical rating data)
-    const ratingChartData: ChartDataPoint[]
+    const ratingChartData: ChartDataPoint[] = currentPeriodDates.map(date => ({
+        date: formatChartDate(date),
+        value: avgRating
+    }));
+
+    return [
+        {
+            key: 'revenue',
+            label: 'Total Revenue',
+            value: currentRevenue,
+            previousValue: previousRevenue,
+            delta: calcDelta(currentRevenue, previousRevenue),
+            format: 'currency',
+            chartData: revenueChartData
+        },
+        {
+            key: 'orders',
+            label: 'Total Orders',
+            value: currentOrders,
+            previousValue: previousOrders,
+            delta: calcDelta(currentOrders, previousOrders),
+            format: 'number',
+            chartData: ordersChartData
+        },
+        {
+            key: 'avgOrderValue',
+            label: 'Avg. Order Value',
+            value: currentAvgOrder,
+            previousValue: previousAvgOrder,
+            delta: calcDelta(currentAvgOrder, previousAvgOrder),
+            format: 'currency',
+            chartData: avgOrderChartData
+        },
         {
             key: 'avgRating',
             label: 'Avg. Product Rating',
