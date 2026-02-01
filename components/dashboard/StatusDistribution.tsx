@@ -7,7 +7,7 @@ interface Props {
     data: { name: string; value: number }[];
 }
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
+const COLORS = ["#F6C95F", "#EDB85A", "#F8DE97", "#F8D978"];
 
 export function StatusDistribution({ data }: Props) {
     return (
@@ -23,8 +23,12 @@ export function StatusDistribution({ data }: Props) {
                                 data={data}
                                 cx="50%"
                                 cy="50%"
-                                labelLine={false}
-                                label={({ name, percent }: { name?: string; percent?: number }) => `${name || 'Unknown'} ${((percent || 0) * 100).toFixed(0)}%`}
+                                labelLine={{ stroke: "#4C4943" }}
+                                label={({ name, percent, x, y }: { name?: string; percent?: number; x?: number; y?: number }) => (
+                                    <text x={x} y={y} fill="#4C4943" textAnchor="middle" dominantBaseline="text-after-edge" fontSize={12}>
+                                        {`${name || 'Unknown'} ${((percent || 0) * 100).toFixed(0)}%`}
+                                    </text>
+                                )}
                                 outerRadius={80}
                                 fill="#8884d8"
                                 dataKey="value"
@@ -33,8 +37,19 @@ export function StatusDistribution({ data }: Props) {
                                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                 ))}
                             </Pie>
-                            <Tooltip />
-                            <Legend />
+                            <Tooltip
+                                contentStyle={{
+                                    backgroundColor: "white",
+                                    border: "1px solid #e5e7eb",
+                                    borderRadius: "8px",
+                                    padding: "2px 4px",
+                                    fontSize: "12px",
+                                }}
+                                itemStyle={{ color: "#4C4943" }}
+                            />
+                            <Legend
+                                formatter={(value) => <span style={{ color: "#4C4943", fontSize: "12px" }}>{value}</span>}
+                            />
                         </PieChart>
                     </ResponsiveContainer>
                 </div>

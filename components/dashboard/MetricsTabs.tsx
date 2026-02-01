@@ -122,8 +122,8 @@ export function MetricsTabs({ metrics }: MetricsTabsProps) {
                                     borderRadius: "8px",
                                     boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
                                 }}
-                                labelStyle={{ color: "#F6C95F" }}
-                                itemStyle={{ color: "#F6C95F" }}
+                                labelStyle={{ color: "#4C4943" }}
+                                itemStyle={{ color: "#4C4943" }}
                             />
                             <Line
                                 type="monotone"
