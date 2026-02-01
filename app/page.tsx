@@ -12,7 +12,6 @@ import {
   ShoppingCart,
   TrendingUp,
   Star,
-  Activity,
 } from "lucide-react";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { RecentOrders } from "@/components/dashboard/RecentOrders";
@@ -22,11 +21,20 @@ import { CategoryDistribution } from "@/components/dashboard/CategoryDistributio
 import { RevenueInsight } from "@/components/dashboard/RevenueInsight";
 import { AutoRefresh } from "@/components/dashboard/AutoRefresh";
 import { LastSynced } from "@/components/dashboard/LastSynced";
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/auth";
 
 // Force dynamic rendering since we want fresh data on every load
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  // Check for session - redirect to login if not authenticated
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    redirect("/login");
+  }
+
   // Fetch data in parallel
   const [
     metrics,
