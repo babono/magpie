@@ -11,7 +11,7 @@ export function CategoryDistribution({ data }: Props) {
     return (
         <Card className="col-span-1">
             <CardHeader>
-                <CardTitle>Products by Category</CardTitle>
+                <CardTitle>Products Count by Category</CardTitle>
             </CardHeader>
             <CardContent>
                 <div className="h-[300px]">
