@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Inter } from "next/font/google";
 import { Providers } from "@/app/providers";
 import "@/app/globals.css";
 
-const geist = Geist({
-    variable: "--font-geist-sans",
+const inter = Inter({
+    variable: "--font-inter",
     subsets: ["latin"],
 });
 
@@ -20,7 +20,7 @@ export default function LoginLayout({
 }>) {
     return (
         <html lang="en">
-            <body className={`${geist.variable} antialiased`}>
+            <body className={`${inter.variable} antialiased`}>
                 <Providers>{children}</Providers>
             </body>
         </html>
