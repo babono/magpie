@@ -74,14 +74,3 @@ enum OrderStatus {
   Delivered
   Cancelled
 }
-
-// Optional: for storing aggregated insights if expensive to compute on the fly
-model GeneratedMetric {
-  id        String   @id @default(uuid())
-  productId Int?     @unique
-  product   Product? @relation(fields: [productId], references: [id])
-  
-  metricType String
-  value      Decimal
-  calculatedAt DateTime @default(now())
-}

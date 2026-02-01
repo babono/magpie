@@ -1,4 +1,4 @@
-# CORVID by Magpie - Tech Lead Interview
+# CORVID by Magpie
 
 ## Architecture Overview
 This project demonstrates a modern, scalable architecture for a high-performance e-commerce dashboard.
