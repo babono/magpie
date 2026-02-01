@@ -1,28 +1,8 @@
 import { schedules } from "@trigger.dev/sdk/v3";
-import { prisma } from "../lib/prisma"; // Adjust path if needed
+import { prisma } from "../lib/prisma";
+import type { ApiProduct, ApiOrder, OrderStatus } from "@/types";
 
-// Types based on the API response
-type ApiProduct = {
-    product_id: number;
-    name: string;
-    description: string;
-    price: number;
-    unit: string;
-    image: string;
-    discount: number;
-    availability: boolean;
-    brand: string;
-    category: string;
-    rating: number;
-};
-
-type ApiOrder = {
-    order_id: number;
-    user_id: number;
-    items: { product_id: number; quantity: number }[];
-    total_price: number;
-    status: string;
-};
+const ORDER_STATUSES: OrderStatus[] = ["Processing", "Shipped", "Delivered", "Cancelled"];
 
 export const syncOrdersTask = schedules.task({
     id: "sync-orders",
@@ -85,11 +65,8 @@ export const syncOrdersTask = schedules.task({
         for (const order of orders) {
             for (let i = 0; i < multiplier; i++) {
                 await prisma.$transaction(async (tx) => {
-
-
                     // 3b. Randomize Status
-                    const statuses = ["Processing", "Shipped", "Delivered", "Cancelled"];
-                    const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+                    const randomStatus: OrderStatus = ORDER_STATUSES[Math.floor(Math.random() * ORDER_STATUSES.length)];
 
                     // 3c. Date Strategy: "Just Now" with slight jitter
                     // We override 'createdAt' to simulate the order placement time
@@ -98,7 +75,7 @@ export const syncOrdersTask = schedules.task({
 
                     // 3d. Prepare Items with Unique Logic
                     let calculatedTotal = 0;
-                    const randomizedItems = [];
+                    const randomizedItems: { productId: number; quantity: number; price: number }[] = [];
 
                     const distinctItemCount = Math.floor(Math.random() * 3) + 1;
 
