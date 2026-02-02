@@ -49,10 +49,10 @@ export default async function DashboardPage() {
   ]);
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
+    <div className="flex-1 space-y-3 p-3 pt-4 sm:space-y-4 sm:p-8 sm:pt-6">
       <AutoRefresh intervalMs={300000} />
       <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+        <h2 className="text-xl sm:text-3xl font-bold tracking-tight">Dashboard</h2>
         <div className="flex items-center space-x-2">
           <LastSynced timestamp={lastSyncTime} />
         </div>

@@ -46,13 +46,13 @@ export function MetricsTabs({ metrics }: MetricsTabsProps) {
     return (
         <Card className="overflow-hidden py-0 pb-6">
             {/* Tab Headers */}
-            <div className="flex border-b">
+            <div className="flex border-b overflow-x-auto scrollbar-hide">
                 {metrics.map((metric, index) => (
                     <button
                         key={metric.key}
                         onClick={() => setActiveTab(index)}
                         className={`
-                            flex-1 px-4 py-4 text-left transition-colors relative
+                            flex-1 min-w-[140px] sm:min-w-0 px-3 sm:px-4 py-3 sm:py-4 text-left transition-colors relative flex-shrink-0 sm:flex-shrink
                             hover:bg-muted/50
                             ${index !== metrics.length - 1 ? "border-r" : ""}
                             ${activeTab === index ? "bg-muted/30" : ""}
@@ -63,11 +63,11 @@ export function MetricsTabs({ metrics }: MetricsTabsProps) {
                             <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: '#F6C95F' }} />
                         )}
 
-                        <div className="text-sm text-muted-foreground mb-1">
+                        <div className="text-xs sm:text-sm text-muted-foreground mb-1">
                             {metric.label}
                         </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-2xl font-bold">
+                        <div className="flex items-center gap-1 sm:gap-2">
+                            <span className="text-lg sm:text-2xl font-bold">
                                 {formatValue(metric.value, metric.format)}
                             </span>
                             {metric.delta !== 0 && (
