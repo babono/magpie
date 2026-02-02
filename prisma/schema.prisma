@@ -29,9 +29,6 @@ model Product {
   availability Boolean @default(true)
   discount    Decimal? @db.Decimal(5, 2)
 
-  // Insights fields
-  totalRevenue GeneratedMetric? 
-  
   orderItems  OrderItem[]
 
   createdAt   DateTime @default(now())
