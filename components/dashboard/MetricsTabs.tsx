@@ -66,21 +66,23 @@ export function MetricsTabs({ metrics }: MetricsTabsProps) {
                         <div className="text-xs sm:text-sm text-muted-foreground mb-1">
                             {metric.label}
                         </div>
-                        <div className="flex items-center gap-1 sm:gap-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
                             <span className="text-lg sm:text-2xl font-bold">
                                 {formatValue(metric.value, metric.format)}
                             </span>
-                            {metric.delta !== 0 && (
-                                <DeltaBadge delta={metric.delta} />
-                            )}
+                            <div className="h-5">
+                                {metric.delta !== 0 && (
+                                    <DeltaBadge delta={metric.delta} />
+                                )}
+                            </div>
                         </div>
                     </button>
                 ))}
             </div>
 
             {/* Chart Content */}
-            <CardContent className="pt-6">
-                <div className="h-[280px]">
+            <CardContent className="pt-4 sm:pt-6">
+                <div className="h-[220px] sm:h-[280px]">
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart
                             data={activeMetric.chartData}
